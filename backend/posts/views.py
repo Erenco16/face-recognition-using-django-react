@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from .api.serializers import FaceEncodingSerializer
 
+
 class FaceRecognitionAPIView(APIView):
     def post(self, request):
         image_url = request.data.get('image_url')
@@ -34,3 +35,5 @@ class FaceRecognitionAPIView(APIView):
         
         serializer = FaceEncodingSerializer({'face_encodings': face_encodings})
         return Response(serializer.data)
+    
+
