@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'posts',
-    'users'
+    'users',
+    'firebase_config'
 ]
 
 CORS_ALLOWED_ORIGINS = ['http://localhost:3000']
