@@ -1,7 +1,7 @@
-from django.shortcuts import render
+import urllib.request
 import cv2
 import numpy as np
-import urllib.request
+import dlib
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .api.serializers import FaceEncodingSerializer
@@ -21,19 +21,36 @@ class FaceRecognitionAPIView(APIView):
         # Decode numpy array to OpenCV image format
         image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
+        # Convert the image to gray scale to improve computational efficiency
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        faces = face_cascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=5)
+        # Initialize face detector
+        face_detector = dlib.get_frontal_face_detector()
+        
+        # Detect faces in the gray image
+        faces = face_detector(gray_image)
+        
+        # Initialize face encoder
+        face_encoder = dlib.shape_predictor("/Users/godfather/Desktop/Software/connect_django_to_react/backend/posts/models/shape_predictor_68_face_landmarks.dat")
         
         face_encodings = []
         
-        for (x, y, w, h) in faces:
-            face = image[y:y+h, x:x+w]
-            encoding = [list(np.array(face).flatten())]
+        for face in faces:
+            # Extract facial landmarks
+            landmarks = face_encoder(gray_image, face)
+            
+            # Convert landmarks to numpy array
+            landmarks_np = np.array([[p.x, p.y] for p in landmarks.parts()])
+            
+            # Encode face (you can use landmarks_np for encoding or any other method you prefer)
+            encoding = np.array(landmarks_np.flatten())
             face_encodings.append(encoding)
         
+        # Serialize face encodings
         serializer = FaceEncodingSerializer({'face_encodings': face_encodings})
+        
         return Response(serializer.data)
     
 
+    def save_to_the_database():
+        return ''
