@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from .api.serializers import FaceEncodingSerializer
 from firebase_config.utils import initialize_app
 from firebase_admin import db
-
+from firebase_config.utils import write_to_db
 
 def get_facial_encodings(request):
     image_url = request.data.get('image_url')
@@ -62,6 +62,12 @@ class FaceRecognitionAPIView(APIView):
     def post(self, request):
         face_encodings = get_facial_encodings(request)
         # Serialize face encodings
-        serializer = FaceEncodingSerializer({'face_encodings': face_encodings})
+        data = {"face_encodings": face_encodings}
+        serializer = FaceEncodingSerializer(data=data)
         
-        return Response(serializer.data)
+        if serializer.is_valid():
+            write_to_db(request, serializer.data.get('title'), serializer.data.get('user_uid'),serializer.data.get('face_encodings'))
+            return Response(serializer.data)
+
+        else:
+            return Response(501)
