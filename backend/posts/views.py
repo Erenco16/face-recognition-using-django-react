@@ -5,9 +5,7 @@ import dlib
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .api.serializers import FaceEncodingSerializer
-from firebase_config.utils import initialize_app
 from firebase_admin import db
-from firebase_config.utils import write_to_db
 
 def get_facial_encodings(request):
     image_url = request.data.get('image_url')
@@ -51,7 +49,6 @@ def get_facial_encodings(request):
     
 
 def save_to_the_database(facial_encodings):
-    app = initialize_app()
     # Get a database reference to our posts
     ref = db.reference('https://console.firebase.google.com/project/test-react-app-f5032/database/test-react-app-f5032-default-rtdb/data/~2F/tests')
 
@@ -66,7 +63,6 @@ class FaceRecognitionAPIView(APIView):
         serializer = FaceEncodingSerializer(data=data)
         
         if serializer.is_valid():
-            write_to_db(request, serializer.data.get('title'), serializer.data.get('user_uid'),serializer.data.get('face_encodings'))
             return Response(serializer.data)
 
         else:
