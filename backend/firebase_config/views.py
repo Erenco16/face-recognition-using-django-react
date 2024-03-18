@@ -1,4 +1,5 @@
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.views import APIView
 
 from .models import FirebaseFaceEncodings
 from .serializers import FaceEncodingSerializer
@@ -8,15 +9,16 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
 from firebase_admin import auth
+from .utils import *
 # Create your views here.
 
 def initialize_app():
     # Use a secure service account JSON file
     cred = credentials.Certificate("/Users/godfather/Desktop/Software/connect_django_to_react/backend/firebase_config/serviceAccount.json")
 
-    app = firebase_admin.initialize_app(cred, {'databaseURL': 'https://test-react-app-f5032-default-rtdb.firebaseio.com'})
-    return app
+    firebase_admin.initialize_app(cred, {'databaseURL': 'https://test-react-app-f5032-default-rtdb.firebaseio.com'})
 
+initialize_app()
 def get_user_uids():
     try:
         ref = db.reference("/users")
@@ -28,7 +30,7 @@ def get_user_uids():
     except Exception as e:
         print(f"Error while getting database: {e}")
 
-def write_face_encodings_to_db(auth, app, request, user_email, user_uid, face_encodings):
+def write_face_encodings_to_db(auth, request, user_email, user_uid, face_encodings):
     key = request.COOKIES.get('userUid')
 
 
@@ -40,8 +42,7 @@ def write_face_encodings_to_db(auth, app, request, user_email, user_uid, face_en
         })
 
 def write_to_db(request, user_email, user_uid, face_encodings):
-    app = initialize_app()
-    write_face_encodings_to_db(auth, app, request, user_email, user_uid, face_encodings)
+    write_face_encodings_to_db(auth, request, user_email, user_uid, face_encodings)
 
 class FaceEncodingViewSet(ModelViewSet):
     queryset = FirebaseFaceEncodings.objects.all()
@@ -61,6 +62,7 @@ class FaceEncodingViewSet(ModelViewSet):
         serializer.validated_data['face_encodings'] = face_encodings
 
         serializer.save()
+
          # Call write_to_db function with extracted data
         write_to_db(self.request, title, user_uid, face_encodings)
 
@@ -73,3 +75,39 @@ class FaceEncodingViewSet(ModelViewSet):
         headers = self.get_success_headers(serializer.data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+def get_email_based_on_index(index):
+    email_list = []
+    try:
+        ref = db.reference("/face_encodings")
+        data = ref.get()
+        for key, value in data.items():
+            email_list.append(str(value.get('title')))
+    except Exception as e:
+        print(f"Error while getting database: {e}")
+    return email_list[index]
+
+
+
+
+class FaceEncodingComparisonViewSet(APIView):
+    def post(self, request, *args, **kwargs):
+        # Extract target encoding from request data
+        target_encoding = request.data.get('target_encoding', [])
+        
+        if not target_encoding:
+            return Response({"error": "Target encoding not provided"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get reference encodings from the database
+        reference_encodings = get_facial_encodings()
+        
+        if not reference_encodings:
+            return Response({"error": "Reference encodings not found in the database"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Perform comparison
+        match_index = return_match_record(target_encoding)
+        
+        if match_index is not None:
+            return Response({"matched_email": get_email_based_on_index(match_index)}, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No match found"}, status=status.HTTP_404_NOT_FOUND)
