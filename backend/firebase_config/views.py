@@ -12,6 +12,7 @@ from firebase_admin import auth
 from .utils import *
 # Create your views here.
 
+
 def initialize_app():
     # Use a secure service account JSON file
     cred = credentials.Certificate("/Users/godfather/Desktop/Software/connect_django_to_react/backend/firebase_config/serviceAccount.json")
@@ -51,11 +52,8 @@ class FaceEncodingViewSet(ModelViewSet):
 
     # overwriting the default email value
     def perform_create(self, serializer):
-        # Get the email value from the request or set it to a default value
         title = self.request.data.get('title', 'default@example.com')
-        # Set the email field in the serializer data
         serializer.validated_data['title'] = title
-        # Perform the creation of the user
         user_uid = self.request.data.get('user_uid', 'user_uid_not_found')
         serializer.validated_data['user_uid'] = user_uid
         face_encodings = self.request.data.get('face_encodings', 'face_encoding_not_found')
@@ -65,8 +63,9 @@ class FaceEncodingViewSet(ModelViewSet):
 
          # Call write_to_db function with extracted data
         write_to_db(self.request, title, user_uid, face_encodings)
+        
 
-
+    
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -94,20 +93,20 @@ class FaceEncodingComparisonViewSet(APIView):
     def post(self, request, *args, **kwargs):
         # Extract target encoding from request data
         target_encoding = request.data.get('target_encoding', [])
-        
+        userEmail = request.data.get('user_email')
         if not target_encoding:
             return Response({"error": "Target encoding not provided"}, status=status.HTTP_400_BAD_REQUEST)
         
         # Get reference encodings from the database
-        reference_encodings = get_facial_encodings()
+        reference_encodings = get_facial_encodings(userEmail)
         
         if not reference_encodings:
             return Response({"error": "Reference encodings not found in the database"}, status=status.HTTP_404_NOT_FOUND)
         
         # Perform comparison
-        match_index = return_match_record(target_encoding)
+        match_index = return_match_record(target_encoding, userEmail)
         
         if match_index is not None:
-            return Response({"matched_email": get_email_based_on_index(match_index)}, status=status.HTTP_200_OK)
+            return Response({"matched_email": userEmail}, status=status.HTTP_200_OK)
         else:
             return Response({"message": "No match found"}, status=status.HTTP_404_NOT_FOUND)
